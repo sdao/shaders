@@ -9,15 +9,15 @@ struct appOutput {
 };
 
 struct vertexOutput {
-  float4 Position : POSITION;
-  float4 Normal : TEXCOORD1;
+  half4 Position : POSITION;
+  half4 Normal : TEXCOORD1;
 };
 
 struct geomOutput {
-  float4 Position : POSITION;
-  float4 Normal : TEXCOORD1;
-  float4 WorldView : TEXCOORD2;
-  float4 Color : COLOR;
+  half4 Position : POSITION;
+  half4 Normal : TEXCOORD1;
+  half4 WorldView : TEXCOORD2;
+  half4 Color : COLOR;
 };
 
 vertexOutput vp(appOutput IN) {
@@ -29,13 +29,13 @@ vertexOutput vp(appOutput IN) {
   return OUT;
 }
 
-TRIANGLE void gp(AttribArray<float4> Position : POSITION,
-                 AttribArray<float4> Normal : TEXCOORD1) {
-  float4 n0 = float4(normalize(Normal[0].xyz), 0);
-  float4 n1 = float4(normalize(Normal[1].xyz), 0);
-  float4 n2 = float4(normalize(Normal[2].xyz), 0);
+TRIANGLE void gp(AttribArray<half4> Position : POSITION,
+                 AttribArray<half4> Normal : TEXCOORD1) {
+  half4 n0 = float4(normalize(Normal[0].xyz), 0);
+  half4 n1 = float4(normalize(Normal[1].xyz), 0);
+  half4 n2 = float4(normalize(Normal[2].xyz), 0);
 
-  float3 w = float3(ViewIXf[0].w, ViewIXf[1].w, ViewIXf[2].w);
+  half3 w = float3(ViewIXf[0].w, ViewIXf[1].w, ViewIXf[2].w);
 
   emitVertex(mul(Wvp, Position[0] + n0 * 5.0) : POSITION,
     float4(1, 0, 0, 1) : COLOR,
@@ -53,40 +53,60 @@ TRIANGLE void gp(AttribArray<float4> Position : POSITION,
   restartStrip();
 }
 
-TRIANGLE void gp2(AttribArray<float4> Position : POSITION,
-                  AttribArray<float4> Normal : TEXCOORD1) {
-  float3 w = float3(ViewIXf[0].w, ViewIXf[1].w, ViewIXf[2].w);
+TRIANGLE void gp2(AttribArray<half4> Position : POSITION,
+                  AttribArray<half4> Normal : TEXCOORD1) {
+  half3 w = float3(ViewIXf[0].w, ViewIXf[1].w, ViewIXf[2].w);
 
   for (int i = 0; i < 2; i++) {
-    float4 n0 = float4(normalize(Normal[i].xyz), 0);
-    float4 n1 = float4(normalize(Normal[i + 1].xyz), 0);
-    float4 n0_1 = float4(normalize(cross(n0.xyz, n1.xyz)), 0);
+    half4 n0 = float4(normalize(Normal[i].xyz), 0);
+    half4 n1 = float4(normalize(Normal[i + 1].xyz), 0);
+    half4 n0_1 = float4(normalize(cross(n0.xyz, n1.xyz)), 0);
 
-    emitVertex(mul(Wvp, Position[i] + n0 * 5.0) : POSITION, float4(1, 0, 0, 1) : COLOR, mul(WitXf, n0) : TEXCOORD1,
+    float dotProd = dot(float4(normalize(w - mul(WorldXf, Position[i]).xyz), 0), mul(WitXf, n0));
+    float htMult = smoothstep(0.75, 1.0, 1.0 - dotProd);
+
+    emitVertex(mul(Wvp, Position[i] + n0 * 5.0 * htMult) : POSITION, float4(1, 0, 0, 1) : COLOR, mul(WitXf, n0) : TEXCOORD1,
       float4(normalize(w - mul(WorldXf, Position[i]).xyz), 0) : TEXCOORD2);
-    emitVertex(mul(Wvp, Position[i + 1] + n1 * 7.0) : POSITION, float4(0, 1, 0, 1) : COLOR, mul(WitXf, n1) : TEXCOORD1,
+    emitVertex(mul(Wvp, Position[i + 1] + n1 * 7.0 * htMult) : POSITION, float4(0, 1, 0, 1) : COLOR, mul(WitXf, n1) : TEXCOORD1,
       float4(normalize(w - mul(WorldXf, Position[i + 1]).xyz), 0) : TEXCOORD2);
-    emitVertex(mul(Wvp, Position[i + 1] + n1 * 5.0) : POSITION, float4(0, 1, 0, 1) : COLOR, mul(WitXf, n1) : TEXCOORD1,
+    emitVertex(mul(Wvp, Position[i + 1] + n1 * 5.0 * htMult) : POSITION, float4(0, 1, 0, 1) : COLOR, mul(WitXf, n1) : TEXCOORD1,
       float4(normalize(w - mul(WorldXf, Position[i + 1]).xyz), 0) : TEXCOORD2);
+/*
+    emitVertex(mul(Wvp, Position[i] + n0 * 5.0 * htMult) : POSITION, float4(1, 0, 0, 1) : COLOR, mul(WitXf, n0) : TEXCOORD1,
+      float4(normalize(w - mul(WorldXf, Position[i]).xyz), 0) : TEXCOORD2);
+    emitVertex(mul(Wvp, Position[i + 1] + n1 * 7.0 * htMult) : POSITION, float4(0, 1, 0, 1) : COLOR, mul(WitXf, n1) : TEXCOORD1,
+      float4(normalize(w - mul(WorldXf, Position[i + 1]).xyz), 0) : TEXCOORD2);
+    emitVertex(mul(Wvp, Position[i] + n1 * 7.0 * htMult) : POSITION, float4(0, 1, 0, 1) : COLOR, mul(WitXf, n1) : TEXCOORD1,
+      float4(normalize(w - mul(WorldXf, Position[i + 1]).xyz), 0) : TEXCOORD2);
+*/
   }
 
-  float4 n0 = float4(normalize(Normal[2].xyz), 0);
-  float4 n1 = float4(normalize(Normal[0].xyz), 0);
-  float4 n0_1 = float4(normalize(cross(n0.xyz, n1.xyz)), 0);
+  half4 n0 = float4(normalize(Normal[2].xyz), 0);
+  half4 n1 = float4(normalize(Normal[0].xyz), 0);
+  half4 n0_1 = float4(normalize(cross(n0.xyz, n1.xyz)), 0);
 
-  emitVertex(mul(Wvp, Position[2] + n0 * 5.0) : POSITION, float4(1, 0, 0, 1) : COLOR, mul(WitXf, n0) : TEXCOORD1,
+  float dotProd = dot(float4(normalize(w - mul(WorldXf, Position[2]).xyz), 0), mul(WitXf, n0));
+  float htMult = smoothstep(0.75, 1.0, 1.0 - dotProd);
+
+  emitVertex(mul(Wvp, Position[2] + n0 * 5.0 * htMult) : POSITION, float4(1, 0, 0, 1) : COLOR, mul(WitXf, n0) : TEXCOORD1,
     float4(normalize(w - mul(WorldXf, Position[2]).xyz), 0) : TEXCOORD2);
-  emitVertex(mul(Wvp, Position[0] + n1 * 7.0) : POSITION, float4(0, 1, 0, 1) : COLOR, mul(WitXf, n1) : TEXCOORD1,
+  emitVertex(mul(Wvp, Position[0] + n1 * 7.0 * htMult) : POSITION, float4(0, 1, 0, 1) : COLOR, mul(WitXf, n1) : TEXCOORD1,
     float4(normalize(w - mul(WorldXf, Position[0]).xyz), 0) : TEXCOORD2);
-  emitVertex(mul(Wvp, Position[0] + n1 * 5.0) : POSITION, float4(0, 1, 0, 1) : COLOR, mul(WitXf, n1) : TEXCOORD1,
+  emitVertex(mul(Wvp, Position[0] + n1 * 5.0 * htMult) : POSITION, float4(0, 1, 0, 1) : COLOR, mul(WitXf, n1) : TEXCOORD1,
     float4(normalize(w - mul(WorldXf, Position[0]).xyz), 0) : TEXCOORD2);
-
+/*
+  emitVertex(mul(Wvp, Position[2] + n0 * 5.0 * htMult) : POSITION, float4(1, 0, 0, 1) : COLOR, mul(WitXf, n0) : TEXCOORD1,
+    float4(normalize(w - mul(WorldXf, Position[2]).xyz), 0) : TEXCOORD2);
+  emitVertex(mul(Wvp, Position[0] + n1 * 7.0 * htMult) : POSITION, float4(0, 1, 0, 1) : COLOR, mul(WitXf, n1) : TEXCOORD1,
+    float4(normalize(w - mul(WorldXf, Position[0]).xyz), 0) : TEXCOORD2);
+  emitVertex(mul(Wvp, Position[2] + n1 * 7.0 * htMult) : POSITION, float4(0, 1, 0, 1) : COLOR, mul(WitXf, n1) : TEXCOORD1,
+    float4(normalize(w - mul(WorldXf, Position[0]).xyz), 0) : TEXCOORD2);
+*/
   restartStrip();
 }
 
 float4 fp(geomOutput IN) : COLOR {
-  float dotProd = dot(IN.WorldView, IN.Normal);
-  return float4(IN.Normal.xyz, smoothstep(0.75, 1.0, 1.0 - dotProd));
+  return float4(IN.Normal.xyz, 1);
 }
 
 technique main {
@@ -99,10 +119,8 @@ technique main {
   }
 
   pass p1 {
-    BlendEnable = true;
-    BlendFunc = int2(SrcAlpha, OneMinusSrcAlpha);
 		DepthTestEnable = true;
-		DepthMask = false;
+		DepthMask = true;
     VertexProgram = compile glslv vp();
     GeometryProgram = compile glslg gp2();
     FragmentProgram = compile glslf fp();
